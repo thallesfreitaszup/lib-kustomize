@@ -1,4 +1,4 @@
-name: build compass
+name: Lint files
 
 on:
   push:
