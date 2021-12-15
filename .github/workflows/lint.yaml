@@ -18,5 +18,4 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v2
         with:
-          working-directory: ./compass
           version: v1.42.0
