@@ -22,4 +22,11 @@ jobs:
       run: go build -v ./...
 
     - name: Test
-      run: go test -v ./kustomize
+      run: go test -v -coverprofile=coverage.cov ./kustomize
+
+    - name: Tests coverage
+      uses: codecov/codecov-action@v2
+      with:
+        file: coverage.cov
+        fail_ci_if_error: true
+        token: ${{ secrets.CODECOV_TOKEN }}
