@@ -26,12 +26,15 @@ type KustomizerWrapper struct {
 	Path        string
 }
 
+// New Instantiate a new Wrapper of Kustomize that will do the `kustomize build` of the source
 func New(kustomizer Renderer, client Getter, destination, source, path string) KustomizerWrapper {
 	fsys := filesys.MakeFsOnDisk()
 
 	return KustomizerWrapper{Renderer: kustomizer, FSys: fsys, Client: client, Destination: destination, Source: source, Path: path}
 }
 
+// Render downloads the content of the source url and calls the kustomizer run to do the build of
+// manifests stored on source
 func (k KustomizerWrapper) Render() ([]unstructured.Unstructured, error) {
 	var unstructuredManifests []unstructured.Unstructured
 

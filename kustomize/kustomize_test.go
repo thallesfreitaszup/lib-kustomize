@@ -1,9 +1,7 @@
 package kustomize_test
 
 import (
-	"encoding/json"
 	"errors"
-	"fmt"
 	. "github.com/onsi/ginkgo"
 	"github.com/stretchr/testify/assert"
 	"lib-kustomize/kustomize"
@@ -16,15 +14,26 @@ import (
 )
 
 var _ = Describe("Kustomize", func() {
+	var source string
+	var destination string
+	var path string
+	var getter *mocks.Getter
+	var renderer *mocks.Renderer
+	BeforeEach(func() {
+
+		source = "example.com/test"
+		destination = "/destination"
+		path = "path"
+		getter = new(mocks.Getter)
+		renderer = new(mocks.Renderer)
+	})
 	Context("when fails to download repository content", func() {
 		It("should return error", func() {
-			source := "example.com/test"
-			destination := "/destination"
-			path := "path"
-			getter := new(mocks.Getter)
-			renderer := new(mocks.Renderer)
+
 			error := errors.New("failed to download resource")
+
 			getter.On("Get").Return(error)
+
 			k := kustomize.New(renderer, getter, destination, source, path)
 			manifests, renderError := k.Render()
 			assert.Equal(GinkgoT(), renderError, error)
@@ -34,14 +43,12 @@ var _ = Describe("Kustomize", func() {
 
 	Context("when fails to render manifests", func() {
 		It("should return error", func() {
-			source := "example.com/test"
-			destination := "/destination"
-			path := "path"
-			getter := new(mocks.Getter)
-			renderer := new(mocks.Renderer)
-			getter.On("Get").Return(nil)
+
 			error := errors.New("failed to render resource")
+
+			getter.On("Get").Return(nil)
 			renderer.On("Run", filesys.MakeFsOnDisk(), filepath.Join(destination, path)).Return(resmap.New(), error)
+
 			k := kustomize.New(renderer, getter, destination, source, path)
 			manifests, renderError := k.Render()
 			assert.Equal(GinkgoT(), renderError, error)
@@ -51,13 +58,10 @@ var _ = Describe("Kustomize", func() {
 
 	Context("when successfully render manifests", func() {
 		It("should return the correct unstructured manifests", func() {
-			source := "example.com/test"
-			destination := "/destination"
-			path := "path"
-			getter := new(mocks.Getter)
-			renderer := new(mocks.Renderer)
+
 			getter.On("Get").Return(nil)
 			renderer.On("Run", filesys.MakeFsOnDisk(), filepath.Join(destination, path)).Return(getManifestsResponseMap(), nil)
+
 			k := kustomize.New(renderer, getter, destination, source, path)
 			manifests, renderError := k.Render()
 			assert.Equal(GinkgoT(), renderError, nil)
@@ -96,7 +100,5 @@ metadata:
 	var rmF = resmap.NewFactory(rf)
 	resmap, err := rmF.FromFile(ldr, "deployment.yaml")
 	assert.NoError(GinkgoT(), err)
-	byte, _ := json.Marshal(resmap)
-	fmt.Println(string(byte))
 	return resmap
 }
