@@ -1,45 +1,46 @@
 package kustomize
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/dgraph-io/ristretto/z"
-	"github.com/hashicorp/go-getter"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"os"
 	"path/filepath"
-	"sigs.k8s.io/kustomize/api/krusty"
-	"sigs.k8s.io/kustomize/kustomize/v4/commands/build"
+	"sigs.k8s.io/kustomize/api/resmap"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
-	"strconv"
 )
 
 type Renderer interface {
-	Render() error
+	Run(fSys filesys.FileSystem, path string) (resmap.ResMap, error)
+}
+
+type Getter interface {
+	Get() error
 }
 
 type KustomizerWrapper struct {
-	FSys       filesys.FileSystem
-	Kustomizer *krusty.Kustomizer
+	FSys        filesys.FileSystem
+	Renderer    Renderer
+	Client      Getter
+	Destination string
+	Source      string
+	Path        string
 }
 
-func New() KustomizerWrapper {
+func New(kustomizer Renderer, client Getter, destination, source, path string) KustomizerWrapper {
 	fsys := filesys.MakeFsOnDisk()
-	kustomize := krusty.MakeKustomizer(
-		build.HonorKustomizeFlags(krusty.MakeDefaultOptions()),
-	)
-	return KustomizerWrapper{Kustomizer: kustomize, FSys: fsys}
+
+	return KustomizerWrapper{Renderer: kustomizer, FSys: fsys, Client: client, Destination: destination, Source: source, Path: path}
 }
 
-func (k KustomizerWrapper) Render(source, path string) ([]unstructured.Unstructured, error) {
+func (k KustomizerWrapper) Render() ([]unstructured.Unstructured, error) {
 	var unstructuredManifests []unstructured.Unstructured
 
-	destination, err := k.getSourceContent(source)
+	err := k.getSourceContent()
 	if err != nil {
 		return unstructuredManifests, err
 	}
-	resMap, err := k.Kustomizer.Run(k.FSys, filepath.Join(destination, path))
+
+	resMap, err := k.Renderer.Run(k.FSys, filepath.Join(k.Destination, k.Path))
 	if err != nil {
 		return unstructuredManifests, err
 	}
@@ -54,21 +55,10 @@ func (k KustomizerWrapper) Render(source, path string) ([]unstructured.Unstructu
 	return unstructuredManifests, nil
 }
 
-func (k KustomizerWrapper) getSourceContent(source string) (string, error) {
-	destination := filepath.Join(os.TempDir(), "kustomize"+strconv.Itoa(int(z.FastRand())))
-	pwd, err := os.Getwd()
-	if err != nil {
-		return "", err
+func (k KustomizerWrapper) getSourceContent() error {
+
+	if err := k.Client.Get(); err != nil {
+		return err
 	}
-	client := getter.Client{
-		Src:  source,
-		Dst:  destination,
-		Pwd:  pwd,
-		Ctx:  context.TODO(),
-		Mode: getter.ClientModeAny,
-	}
-	if err := client.Get(); err != nil {
-		return "", err
-	}
-	return destination, nil
+	return nil
 }
