@@ -35,6 +35,8 @@ func New(kustomizer Renderer, client Getter, destination, source, path string, c
 	return KustomizerWrapper{Renderer: kustomizer, FSys: fsys, Client: client, Destination: destination, Source: source, Path: path, Cache: cache}
 }
 
+// Render downloads the content of the source url and calls the kustomizer run to do the build of
+// manifests stored on source
 func (k KustomizerWrapper) Render() ([]unstructured.Unstructured, error) {
 	var unstructuredManifests []unstructured.Unstructured
 	var manifests, err = k.Cache.GetManifests(k.Source)
