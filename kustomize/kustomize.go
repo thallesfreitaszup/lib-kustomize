@@ -61,7 +61,6 @@ func (k KustomizerWrapper) Render() ([]unstructured.Unstructured, error) {
 		return unstructuredManifests, fmt.Errorf("error converting kustomize resources to unstructured manifests %w", err)
 	}
 	err = k.Cache.Add(k.Source, unstructuredManifests)
-	fmt.Println("first time no cache")
 	if err != nil {
 		return nil, err
 	}

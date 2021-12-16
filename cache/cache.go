@@ -27,9 +27,7 @@ func (w Wrapper) GetManifests(source string) ([]unstructured.Unstructured, error
 		if err != nil {
 			return nil, err
 		}
-		fmt.Println(response.Header)
 		etag = response.Header.Get("ETag")
-		println(etag)
 		set := w.client.Set(source, etag, 1)
 		if !set {
 			return nil, err
