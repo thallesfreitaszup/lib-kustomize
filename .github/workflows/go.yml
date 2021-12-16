@@ -22,7 +22,7 @@ jobs:
       run: go build -v ./...
 
     - name: Test
-      run: go test -v -coverprofile=coverage.cov ./kustomize
+      run: go test -v -coverprofile=coverage.cov ./kustomize ./cache
 
     - name: Tests coverage
       uses: codecov/codecov-action@v2

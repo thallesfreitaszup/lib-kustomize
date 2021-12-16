@@ -12,8 +12,14 @@ type Cache interface {
 	Get(key interface{}) (interface{}, bool)
 	Set(key, value interface{}, cost int64) bool
 }
+
+type HttpClient interface {
+	Do(req *http.Request) (*http.Response, error)
+}
+
 type Wrapper struct {
-	client Cache
+	cache      Cache
+	httpClient HttpClient
 }
 
 func (w Wrapper) GetManifests(source string) ([]unstructured.Unstructured, error) {
@@ -21,14 +27,14 @@ func (w Wrapper) GetManifests(source string) ([]unstructured.Unstructured, error
 	var etag string
 	repo, owner := w.GetRepoOwner(source)
 	apiUrl := fmt.Sprintf("https://api.github.com/repos/%s/%s", owner, repo)
-	etagItem, got := w.client.Get(source)
+	etagItem, got := w.cache.Get(source)
 	if !got {
-		response, err := doRequest(apiUrl, map[string]string{})
+		response, err := w.doRequest(apiUrl, map[string]string{})
 		if err != nil {
 			return nil, err
 		}
 		etag = response.Header.Get("ETag")
-		set := w.client.Set(source, etag, 1)
+		set := w.cache.Set(source, etag, 1)
 		if !set {
 			return nil, err
 		}
@@ -39,12 +45,12 @@ func (w Wrapper) GetManifests(source string) ([]unstructured.Unstructured, error
 	headers := map[string]string{
 		"If-None-Match": etag,
 	}
-	response, err := doRequest(apiUrl, headers)
+	response, err := w.doRequest(apiUrl, headers)
 	if err != nil {
 		return unstructuredManifests, err
 	}
 	if response.StatusCode == http.StatusNotModified {
-		item, got := w.client.Get(etag)
+		item, got := w.cache.Get(etag)
 		if !got {
 			return nil, fmt.Errorf("failed to get value from key %s", item)
 		}
@@ -57,8 +63,7 @@ func (w Wrapper) GetManifests(source string) ([]unstructured.Unstructured, error
 	return nil, errors.New("resource modified, should download it again")
 }
 
-func doRequest(url string, headers map[string]string) (*http.Response, error) {
-	client := http.Client{}
+func (w Wrapper) doRequest(url string, headers map[string]string) (*http.Response, error) {
 	request, err := http.NewRequest("GET", url, nil)
 
 	for key, value := range headers {
@@ -67,7 +72,7 @@ func doRequest(url string, headers map[string]string) (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
-	response, err := client.Do(request)
+	response, err := w.httpClient.Do(request)
 	if err != nil {
 		return nil, err
 	}
@@ -80,19 +85,20 @@ func (w Wrapper) GetRepoOwner(source string) (string, string) {
 }
 
 func (w Wrapper) Add(source string, manifests []unstructured.Unstructured) error {
-	itemETag, got := w.client.Get(source)
+	itemETag, got := w.cache.Get(source)
 	if !got {
 		return errors.New("error getting etag on cache")
 	}
-	set := w.client.Set(itemETag, manifests, 1)
+	set := w.cache.Set(itemETag, manifests, 1)
 	if !set {
 		return errors.New("failed to set manifests to cache")
 	}
 	return nil
 }
 
-func New(client Cache) Wrapper {
+func New(client Cache, httpClient HttpClient) Wrapper {
 	return Wrapper{
-		client: client,
+		cache:      client,
+		httpClient: httpClient,
 	}
 }

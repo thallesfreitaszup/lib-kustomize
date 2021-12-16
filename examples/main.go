@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/go-getter"
 	"lib-kustomize/cache"
 	"lib-kustomize/kustomize"
+	"net/http"
 	"os"
 	"path/filepath"
 	"sigs.k8s.io/kustomize/api/krusty"
@@ -25,7 +26,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	wrapper := cache.New(cacheClient)
+	wrapper := cache.New(cacheClient, &http.Client{})
 	kustomizer := krusty.MakeKustomizer(
 		build.HonorKustomizeFlags(krusty.MakeDefaultOptions()))
 	pwd, err := os.Getwd()
