@@ -93,6 +93,46 @@ var _ = Describe("Kustomize", func() {
 		})
 	})
 
+	Context("when fails to add manifests in cache", func() {
+		It("should return error", func() {
+
+			getter.On("Get").Return(nil)
+			renderer.On("Run", filesys.MakeFsOnDisk(), filepath.Join(destination, path)).Return(getManifestsResponseMap(), nil)
+			mockCache.On("Get", source).Return("123", true)
+			mockHttp.On("Do", mock.Anything).Return(GetHTTPResponseWithStatusModified(), nil)
+			mockCache.On("Set", "123", getManifestsUnstructured(), int64(1)).Times(1).Return(false)
+			k := kustomize.New(renderer, getter, destination, source, path, cacheWrapper)
+			manifests, renderError := k.Render()
+			assert.Equal(GinkgoT(), renderError, errors.New("failed to set manifests to cache"))
+			assert.Equal(GinkgoT(), len(manifests), 0)
+
+		})
+	})
+
+	Context("when sucessfully  get manifests in cache", func() {
+		It("should return manifests", func() {
+			etag := "dummy-etag"
+			getter.On("Get").Return(nil)
+			renderer.On("Run", filesys.MakeFsOnDisk(), filepath.Join(destination, path)).Return(getManifestsResponseMap(), nil)
+			mockCache.On("Get", source).Return(etag, true)
+			mockHttp.On("Do", mock.Anything).Return(GetHTTPResponseWithStatusNotModified(), nil)
+			mockCache.On("Get", etag).Times(1).Return(getManifestsUnstructured(), true)
+			k := kustomize.New(renderer, getter, destination, source, path, cacheWrapper)
+			manifests, renderError := k.Render()
+			assert.Equal(GinkgoT(), renderError, nil)
+			assert.Equal(GinkgoT(), len(manifests), 2)
+			assert.Equal(GinkgoT(), renderError, nil)
+			assert.Equal(GinkgoT(), len(manifests), 2)
+			assert.Equal(GinkgoT(), manifests[0].GetName(), "deploy1")
+			assert.Equal(GinkgoT(), manifests[0].GetKind(), "Deployment")
+			assert.Equal(GinkgoT(), manifests[0].GetAPIVersion(), "apps/v1")
+			assert.Equal(GinkgoT(), manifests[1].GetAPIVersion(), "apps/v1")
+			assert.Equal(GinkgoT(), manifests[1].GetKind(), "Deployment")
+			assert.Equal(GinkgoT(), manifests[1].GetName(), "deploy2")
+
+		})
+	})
+
 })
 
 func getManifestsResponseMap() resmap.ResMap {
