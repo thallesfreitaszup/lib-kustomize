@@ -22,6 +22,9 @@ type Wrapper struct {
 	httpClient HttpClient
 }
 
+//GetManifests checks using the etag of resource if the resource is modified on github using conditional requests
+//( https://docs.github.com/en/rest/overview/resources-in-the-rest-api#conditional-requests)
+// if is not modified return manifests stored on cache
 func (w Wrapper) GetManifests(source string) ([]unstructured.Unstructured, error) {
 	var unstructuredManifests []unstructured.Unstructured
 	var etag string
@@ -78,11 +81,12 @@ func (w Wrapper) doRequest(url string, headers map[string]string) (*http.Respons
 	return response, nil
 }
 
-func (w Wrapper) GetRepoOwner(source string) (string, string) {
+func (w Wrapper) getRepoOwner(source string) (string, string) {
 	arrSource := strings.Split(source, "/")
 	return arrSource[len(arrSource)-1], arrSource[len(arrSource)-2]
 }
 
+// Add store manifests on cache
 func (w Wrapper) Add(source string, manifests []unstructured.Unstructured) error {
 	itemETag, got := w.cache.Get(source)
 	if !got {
