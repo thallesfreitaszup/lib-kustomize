@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"lib-kustomize/cache"
 	"path/filepath"
 	"sigs.k8s.io/kustomize/api/resmap"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
@@ -24,21 +25,25 @@ type KustomizerWrapper struct {
 	Destination string
 	Source      string
 	Path        string
+	Cache       cache.Wrapper
 }
 
 // New Instantiate a new Wrapper of Kustomize that will do the `kustomize build` of the source
-func New(kustomizer Renderer, client Getter, destination, source, path string) KustomizerWrapper {
+func New(kustomizer Renderer, client Getter, destination, source, path string, cache cache.Wrapper) KustomizerWrapper {
 	fsys := filesys.MakeFsOnDisk()
 
-	return KustomizerWrapper{Renderer: kustomizer, FSys: fsys, Client: client, Destination: destination, Source: source, Path: path}
+	return KustomizerWrapper{Renderer: kustomizer, FSys: fsys, Client: client, Destination: destination, Source: source, Path: path, Cache: cache}
 }
 
 // Render downloads the content of the source url and calls the kustomizer run to do the build of
 // manifests stored on source
 func (k KustomizerWrapper) Render() ([]unstructured.Unstructured, error) {
 	var unstructuredManifests []unstructured.Unstructured
-
-	err := k.getSourceContent()
+	var manifests, err = k.Cache.GetManifests(k.Source)
+	if err == nil {
+		return manifests, nil
+	}
+	err = k.getSourceContent()
 	if err != nil {
 		return unstructuredManifests, err
 	}
@@ -54,6 +59,10 @@ func (k KustomizerWrapper) Render() ([]unstructured.Unstructured, error) {
 	err = json.Unmarshal(resources, &unstructuredManifests)
 	if err != nil {
 		return unstructuredManifests, fmt.Errorf("error converting kustomize resources to unstructured manifests %w", err)
+	}
+	err = k.Cache.Add(k.Source, unstructuredManifests)
+	if err != nil {
+		return nil, err
 	}
 	return unstructuredManifests, nil
 }
