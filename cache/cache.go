@@ -28,7 +28,7 @@ type Wrapper struct {
 func (w Wrapper) GetManifests(source string) ([]unstructured.Unstructured, error) {
 	var unstructuredManifests []unstructured.Unstructured
 	var etag string
-	repo, owner := w.GetRepoOwner(source)
+	repo, owner := w.getRepoOwner(source)
 	apiUrl := fmt.Sprintf("https://api.github.com/repos/%s/%s", owner, repo)
 	etagItem, got := w.cache.Get(source)
 	if !got {
