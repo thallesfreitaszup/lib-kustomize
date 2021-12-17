@@ -39,9 +39,8 @@ func (w Wrapper) GetManifests(source string) ([]unstructured.Unstructured, error
 			return nil, err
 		}
 		return nil, errors.New("first request, not cached yet")
-	} else {
-		etag = etagItem.(string)
 	}
+	etag = etagItem.(string)
 	headers := map[string]string{
 		"If-None-Match": etag,
 	}
