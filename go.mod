@@ -1,4 +1,4 @@
-module lib-kustomize
+module github.com/thallesfreitaszup/lib-kustomize
 
 go 1.17
 

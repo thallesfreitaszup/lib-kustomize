@@ -3,8 +3,8 @@ package kustomize
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/thallesfreitaszup/lib-kustomize/cache"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"lib-kustomize/cache"
 	"path/filepath"
 	"sigs.k8s.io/kustomize/api/resmap"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
