@@ -109,7 +109,7 @@ var _ = Describe("Kustomize", func() {
 		})
 	})
 
-	Context("when sucessfully  get manifests in cache", func() {
+	Context("when successfully  get manifests in cache", func() {
 		It("should return manifests", func() {
 			etag := "dummy-etag"
 			getter.On("Get").Return(nil)
